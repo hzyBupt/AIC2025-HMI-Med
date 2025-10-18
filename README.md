@@ -1,9 +1,7 @@
-**CVFSNet: A Cross View Fusion Scoring Network for end-to-end mTICI Scoring (submitted to MEDIA)**
+**CVFSNet: A Cross View Fusion Scoring Network for end-to-end mTICI Scoring (AIC2025 Med-HMI)**
 ==============================================================================================================================
 
-Created by Weijin Xu, Tao Tan, Huihua Yang, Wentao Liu, Yifu Chen, Ling Zhang, Xipeng Pan, Feng Gao, Yiming Deng, Theo
-van Walsum, Matthijs van der Sluijs, Ruisheng Su
-
+Created by Heziyang Weijin Xu
 
 ![](Show//Net_CVFMTrans_QV.png)
 ![](Show//Show.png)
