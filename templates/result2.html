@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="{{ lang|default('zh') }}">
+<head>
+  <meta charset="utf-8">
+  <title>预测结果 - CVFSNet</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #e8f1ff 0%, #fefefe 35%, #f9fbff 100%);
+      min-height: 100vh;
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+    }
+    .container {
+      max-width: 1200px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .result-card {
+      border-radius: 16px;
+      box-shadow: 0 8px 25px rgba(0, 74, 173, 0.12);
+      background: #ffffff;
+      border: none;
+      padding: 20px;
+    }
+    .badge-pill {
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 0.8rem;
+    }
+    .prob-row {
+      margin-bottom: 12px;
+    }
+    .gif-frame img {
+      width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      background: #000;
+    }
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #0a3b8a;
+      margin-bottom: 10px;
+    }
+    .lang-switch {
+      display: inline-flex;
+      border-radius: 999px;
+      background-color: rgba(0, 74, 173, 0.08);
+      padding: 3px;
+    }
+    .lang-switch .btn {
+      border-radius: 999px !important;
+      font-weight: 600;
+      padding: 2px 10px;
+      font-size: 0.8rem;
+    }
+    .mtici-info {
+      background: rgba(0, 74, 173, 0.05);
+      border-radius: 10px;
+      padding: 12px 14px;
+      box-shadow: inset 0 0 0 1px rgba(0, 74, 173, 0.08);
+      font-size: 0.85rem;
+    }
+    .mtici-info h6 {
+      color: #004aad;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .mtici-info p, .mtici-info li {
+      color: #495057;
+      margin-bottom: 4px;
+    }
+    .footer-btn {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <div class="d-flex justify-content-end mb-2">
+      <div class="lang-switch btn-group btn-group-sm" role="group" id="langSwitch">
+        <button type="button" class="btn btn-outline-primary" data-lang="zh">中文</button>
+        <button type="button" class="btn btn-outline-primary" data-lang="en">English</button>
+      </div>
+    </div>
+
+    <div class="text-center mb-3">
+      <h1 class="fw-bold text-primary mb-1" data-i18n="resultTitle">📊 模型预测结果</h1>
+      <p class="text-muted small" data-i18n="resultSubtitle">
+        结合冠状位、矢状位以及多视角融合，展示分级概率与最终判断。
+      </p>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-4">
+        <div class="result-card h-100">
+          <h6 class="section-title" data-i18n="quickPreviewTitle">快速 GIF 预览</h6>
+          <img src="data:image/gif;base64,{{ gif_cor }}" class="mb-2" alt="COR 预览">
+          <img src="data:image/gif;base64,{{ gif_sag }}" alt="SAG 预览">
+        </div>
+      </div>
+
+      <div class="col-lg-8">
+        <div class="result-card mb-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="text-primary fw-bold" data-i18n="fuseHeading">融合视图 (FUSE)</h6>
+            <span class="badge bg-success rounded-pill">Top1: {{ pred_fuse }}</span>
+          </div>
+          {% for label, prob in fuse_info %}
+          <div class="prob-row">
+            <div class="d-flex justify-content-between small">
+              <span>{{ label }}</span>
+              <span>{{ '%.1f'|format(prob * 100) }}%</span>
+            </div>
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar bg-primary" style="width: {{ prob * 100 }}%"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="d-flex gap-2">
+          <div class="result-card flex-fill">
+            <h6 class="text-secondary fw-semibold" data-i18n="corPanelTitle">冠状视图 (COR)</h6>
+            {% for label, prob in cor_info %}
+            <div class="prob-row small">
+              <div class="d-flex justify-content-between">
+                <span>{{ label }}</span>
+                <span>{{ '%.1f'|format(prob * 100) }}%</span>
+              </div>
+              <div class="progress" style="height: 5px;">
+                <div class="progress-bar bg-secondary" style="width: {{ prob * 100 }}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="result-card flex-fill">
+            <h6 class="text-info fw-semibold" data-i18n="sagPanelTitle">矢状视图 (SAG)</h6>
+            {% for label, prob in sag_info %}
+            <div class="prob-row small">
+              <div class="d-flex justify-content-between">
+                <span>{{ label }}</span>
+                <span>{{ '%.1f'|format(prob * 100) }}%</span>
+              </div>
+              <div class="progress" style="height: 5px;">
+                <div class="progress-bar bg-info" style="width: {{ prob * 100 }}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== mTICI 分级简介 ===== -->
+    <div class="mtici-info mt-3">
+      <h6 data-i18n="mticiHeading">mTICI 分级简介</h6>
+      <p class="mb-1" data-i18n="mticiLead">改良血栓溶栓在脑血管疾病评估中常用 mTICI 分级来描述血管再通情况[1]：</p>
+      <ul class="ps-3 mb-1">
+        <li data-i18n="mtici0"><strong>mTICI 0：</strong>无再通。</li>
+        <li data-i18n="mtici1"><strong>mTICI 1：</strong>微量再通。</li>
+        <li data-i18n="mtici2a"><strong>mTICI 2a：</strong>部分再通，灌注 &lt;50%。</li>
+        <li data-i18n="mtici2b"><strong>mTICI 2b：</strong>灌注 50–99%。</li>
+        <li data-i18n="mtici3"><strong>mTICI 3：</strong>完全再通。</li>
+      </ul>
+      <p class="mb-1" data-i18n="mticiNote">在临床实践中，mTICI 评分 T1 定义模糊，观察者间差异较大，T0 与 T1 常合并为 T0/1 评分[2]。</p>
+      <p class="small text-muted mt-2 mb-0" data-i18n="mticiRefs">
+        [1] Zaidat O O, Yoo A J, Khatri P, et al. <em>Recommendations on angiographic revascularization grading standards for acute ischemic stroke: a consensus statement.</em>
+        <strong>Stroke</strong>, 2013, 44(9): 2650–2663.  
+        <br>
+        [2] Tung E L, McTaggart R A, Baird G L, et al. <em>Rethinking thrombolysis in cerebral infarction 2b: which thrombolysis in cerebral infarction scales best define near complete recanalization in the modern thrombectomy era?</em>
+        <strong>Stroke</strong>, 2017, 48(9): 2488–2493.
+      </p>
+    </div>
+
+    <div class="text-center footer-btn">
+      <a class="btn btn-outline-primary btn-sm px-4" id="returnLink" href="{{ url_for('index') }}" data-i18n="backButton">⬅ 返回重新上传</a>
+    </div>
+  </div>
+
+  <script>
+    const translations = {
+      zh: {
+        pageTitle: "预测结果 - CVFSNet",
+        resultTitle: "📊 模型预测结果",
+        resultSubtitle: "结合冠状位、矢状位以及多视角融合，展示分级概率与最终判断。",
+        quickPreviewTitle: "快速 GIF 预览",
+        fuseHeading: "融合视图 (FUSE)",
+        corPanelTitle: "冠状视图 (COR)",
+        sagPanelTitle: "矢状视图 (SAG)",
+        backButton: "⬅ 返回重新上传",
+        mticiHeading: "mTICI 分级简介",
+        mticiLead: "改良血栓溶栓在脑血管疾病评估中常用 mTICI 分级来描述血管再通情况[1]：",
+        mtici0: "<strong>mTICI 0：</strong>无再通。",
+        mtici1: "<strong>mTICI 1：</strong>微量再通。",
+        mtici2a: "<strong>mTICI 2a：</strong>部分再通，灌注 &lt;50%。",
+        mtici2b: "<strong>mTICI 2b：</strong>灌注 50–99%。",
+        mtici3: "<strong>mTICI 3：</strong>完全再通。",
+        mticiNote: "<strong>在临床实践中，mTICI 评分 T1 定义模糊，观察者间差异较大，T0 与 T1 常合并为 T0/1 评分[2]。<strong>",
+        mticiRefs: "[1] Zaidat O O, Yoo A J, Khatri P, et al. <em>Recommendations on angiographic revascularization grading standards for acute ischemic stroke: a consensus statement.</em> <strong>Stroke</strong>, 2013, 44(9): 2650–2663.<br>[2] Tung E L, McTaggart R A, Baird G L, et al. <em>Rethinking thrombolysis in cerebral infarction 2b: which thrombolysis in cerebral infarction scales best define near complete recanalization in the modern thrombectomy era?</em> <strong>Stroke</strong>, 2017, 48(9): 2488–2493."
+      },
+      en: {
+        pageTitle: "Prediction Results - CVFSNet",
+        resultTitle: "📊 Model Prediction Overview",
+        resultSubtitle: "Displays grading probabilities across coronal, sagittal, and fused views.",
+        quickPreviewTitle: "Animated GIF Preview",
+        fuseHeading: "Fused View (FUSE)",
+        corPanelTitle: "Coronal View (COR)",
+        sagPanelTitle: "Sagittal View (SAG)",
+        backButton: "⬅ Back to Upload",
+        mticiHeading: "mTICI Grading Overview",
+        mticiLead: "The modified TICI scale describes cerebral reperfusion status [1]:",
+        mtici0: "<strong>mTICI 0:</strong> No reperfusion; complete occlusion.",
+        mtici1: "<strong>mTICI 1:</strong> Minimal reperfusion.",
+        mtici2a: "<strong>mTICI 2a:</strong> Partial reperfusion with &lt;50% distal filling.",
+        mtici2b: "<strong>mTICI 2b:</strong> Substantial reperfusion with 50–99% perfusion.",
+        mtici3: "<strong>mTICI 3:</strong> Complete reperfusion.",
+        mticiNote: "<strong>In clinical practice, the definition of T1 is ambiguous; T0 and T1 are often merged as T0/1 [2].<strong>",
+        mticiRefs: "[1] Zaidat O O, Yoo A J, Khatri P, et al. <em>Recommendations on angiographic revascularization grading standards for acute ischemic stroke: a consensus statement.</em> <strong>Stroke</strong>, 2013, 44(9): 2650–2663.<br>[2] Tung E L, McTaggart R A, Baird G L, et al. <em>Rethinking thrombolysis in cerebral infarction 2b: which thrombolysis in cerebral infarction scales best define near complete recanalization in the modern thrombectomy era?</em> <strong>Stroke</strong>, 2017, 48(9): 2488–2493."
+      }
+    };
+
+    const initialLang = "{{ lang|default('zh') }}";
+    const langSwitchButtons = document.querySelectorAll('#langSwitch [data-lang]');
+    let currentLang = localStorage.getItem('mtici-lang') || initialLang;
+
+    function applyTranslations() {
+      const pack = translations[currentLang] || translations.zh;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (pack[key]) el.innerHTML = pack[key];
+      });
+      document.title = pack.pageTitle;
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('mtici-lang', lang);
+      document.documentElement.lang = lang;
+      applyTranslations();
+      langSwitchButtons.forEach(btn => {
+        if (btn.dataset.lang === lang) {
+          btn.classList.add('btn-primary');
+          btn.classList.remove('btn-outline-primary');
+        } else {
+          btn.classList.add('btn-outline-primary');
+          btn.classList.remove('btn-primary');
+        }
+      });
+    }
+
+    langSwitchButtons.forEach(btn =>
+      btn.addEventListener('click', () => setLanguage(btn.dataset.lang))
+    );
+
+    setLanguage(currentLang);
+  </script>
+</body>
+</html>

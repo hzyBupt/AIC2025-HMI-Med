@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="{{ lang|default('zh') }}">
+<head>
+  <meta charset="UTF-8">
+  <title>改良脑梗死溶栓(mTICI) 辅助诊断系统| HMI-Med</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f0f6ff, #ffffff);
+      font-family: "Segoe UI", "Microsoft YaHei";
+      color: #333;
+      min-height: 100vh;
+    }
+
+    .main-card {
+      max-width: 900px;
+      margin: 50px auto;
+      padding: 40px;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      text-align: center;
+      transition: all 0.4s ease;
+    }
+
+    h2.title { color: #004aad; font-weight: bold; margin-bottom: 10px; }
+    p.subtitle { color: #6c757d; margin-bottom: 25px; }
+
+    .preview-container {
+      margin-top: 10px;
+    }
+
+    .preview-gif {
+      max-width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .btn-primary {
+      background-color: #007bff;
+      border: none;
+      font-weight: 600;
+      padding: 10px 30px;
+      border-radius: 8px;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-primary:hover {
+      background-color: #0056b3;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      border-radius: 999px;
+      background-color: rgba(0, 74, 173, 0.08);
+      padding: 4px;
+    }
+
+    .lang-switch .btn {
+      border-radius: 999px !important;
+      font-weight: 600;
+    }
+
+    .mtici-info {
+      margin-top: 32px;
+      text-align: left;
+      background: rgba(0, 74, 173, 0.05);
+      border-radius: 12px;
+      padding: 18px 20px;
+      box-shadow: inset 0 0 0 1px rgba(0, 74, 173, 0.08);
+    }
+
+    .mtici-info h6 {
+      color: #004aad;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .mtici-info p,
+    .mtici-info li {
+      font-size: 0.9rem;
+      color: #495057;
+    }
+  </style>
+</head>
+<body>
+  <!-- ===== 上传表单卡片 ===== -->
+  <div id="uploadCard" class="main-card fade-in">
+    <div class="d-flex justify-content-end mb-3">
+      <div class="lang-switch btn-group btn-group-sm" role="group" id="langSwitch">
+        <button type="button" class="btn btn-outline-primary" data-lang="zh">中文</button>
+        <button type="button" class="btn btn-outline-primary" data-lang="en">English</button>
+      </div>
+    </div>
+    <h2 class="title" data-i18n="title">🩻 改良脑梗死溶栓(mTICI) 辅助诊断系统</h2>
+    <p class="subtitle" data-i18n="subtitle">上传冠状位与矢状位影像，系统将自动进行特征分析与分级预测。</p>
+
+    <form id="uploadForm" action="/" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="lang" id="langInput" value="{{ lang|default('zh') }}">
+      <div class="upload-box">
+        <label class="file-label" data-i18n="corLabel">冠状视图 (COR) DICOM 文件</label>
+        <input class="form-control" id="corFile" type="file" name="cor_dicom" accept=".dcm" required>
+        <div id="corName" class="file-name"></div>
+        <div id="corPreviewContainer" class="preview-container d-none">
+          <div class="preview-title" data-i18n="previewTitle">快速预览</div>
+          <img id="corPreview" class="preview-gif d-none" alt="COR 预览" />
+          <div id="corPreviewStatus" class="text-muted small mt-2" data-status="idle">等待生成预览...</div>
+        </div>
+      </div>
+
+      <div class="upload-box mt-3">
+        <label class="file-label" data-i18n="sagLabel">矢状视图 (SAG) DICOM 文件</label>
+        <input class="form-control" id="sagFile" type="file" name="sag_dicom" accept=".dcm" required>
+        <div id="sagName" class="file-name"></div>
+        <div id="sagPreviewContainer" class="preview-container d-none">
+          <div class="preview-title" data-i18n="previewTitle">快速预览</div>
+          <img id="sagPreview" class="preview-gif d-none" alt="SAG 预览" />
+          <div id="sagPreviewStatus" class="text-muted small mt-2" data-status="idle">等待生成预览...</div>
+        </div>
+      </div>
+
+      <button id="submitBtn" class="btn btn-primary mt-3" type="submit" data-i18n="submit">开始预测</button>
+    </form>
+
+    <div class="footer mt-3" data-i18n="footer">
+      © 2025 HMI-Med Demo | 智能医学影像分析
+    </div>
+  </div>
+
+  <!-- ===== 加载界面 ===== -->
+  <div id="loading" style="display:none;">
+    <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status"></div>
+    <h5 class="mt-4" data-i18n="loadingTitle">系统正在分析，DICOM 预览如下…</h5>
+    <div class="loading-gif-wrapper d-flex justify-content-center gap-3 mt-3">
+      <div class="loading-gif-card text-center">
+        <h6 data-i18n="loadingCorHeading">冠状位预览</h6>
+        <img id="loadingCorGif" class="preview-gif d-none" alt="COR GIF 预览" />
+        <div id="loadingCorPlaceholder" class="text-muted small mt-2">等待生成...</div>
+      </div>
+      <div class="loading-gif-card text-center">
+        <h6 data-i18n="loadingSagHeading">矢状位预览</h6>
+        <img id="loadingSagGif" class="preview-gif d-none" alt="SAG GIF 预览" />
+        <div id="loadingSagPlaceholder" class="text-muted small mt-2">等待生成...</div>
+      </div>
+    </div>
+
+    <div class="mtici-info mt-4">
+  <h6 data-i18n="mticiHeading">mTICI 分级简介</h6>
+  <p class="mb-2" data-i18n="mticiLead">
+    改良血栓溶栓在脑血管疾病评估中常用 mTICI 分级来描述血管再通情况[1]：
+  </p>
+  <ul class="ps-3 mb-0">
+    <li data-i18n="mtici0"><strong>mTICI 0：</strong>无再通，完全闭塞。</li>
+    <li data-i18n="mtici1"><strong>mTICI 1：</strong>微量再通，造影剂仅少量通过。</li>
+    <li data-i18n="mtici2a"><strong>mTICI 2a：</strong>部分再通，灌注不到 50%。</li>
+    <li data-i18n="mtici2b"><strong>mTICI 2b：</strong>大部分再通，灌注 50-99%。</li>
+    <li data-i18n="mtici3"><strong>mTICI 3：</strong>完全再通，正常灌注。</li>
+  </ul>
+
+  <p class="mt-3" data-i18n="mticiNote">
+    在临床实践中，mTICI 评分 T1 的定义较为模糊，观察者间差异较大，T0 与 T1
+    常被合并为 T0/1 评分[2]。
+  </p>
+
+  <p class="small text-muted mt-2 mb-0" data-i18n="mticiRefs">
+    [1] Zaidat O O, Yoo A J, Khatri P, et al. <em>Recommendations on angiographic revascularization grading standards for acute ischemic stroke: a consensus statement.</em>
+    <strong>Stroke</strong>, 2013, 44(9): 2650–2663.  
+    <br>
+    [2] Tung E L, McTaggart R A, Baird G L, et al. <em>Rethinking thrombolysis in cerebral infarction 2b: which thrombolysis in cerebral infarction scales best define near complete recanalization in the modern thrombectomy era?</em>
+    <strong>Stroke</strong>, 2017, 48(9): 2488–2493.
+  </p>
+</div>
+  </div>
+
+  <!-- ===== 前端交互逻辑 ===== -->
+  <script>
+    const DEFAULT_FPS = 4;
+    const previewState = { cor: null, sag: null };
+
+    // 多语言翻译表
+    const translations = {
+      zh: {
+        title: "🩻 改良脑梗死溶栓(mTICI) 辅助诊断系统",
+        subtitle: "上传冠状位与矢状位影像，系统将自动进行特征分析与分级预测。",
+        corLabel: "冠状视图 (COR) DICOM 文件",
+        sagLabel: "矢状视图 (SAG) DICOM 文件",
+        previewTitle: "快速预览",
+        submit: "开始预测",
+        footer: "© 2025 HMI-Med Demo | 智能医学影像分析",
+        loadingTitle: "系统正在分析，DICOM 预览如下…",
+        loadingCorHeading: "冠状位预览",
+        loadingSagHeading: "矢状位预览",
+        mticiHeading: "mTICI 分级简介",
+        mticiLead: "改良血栓溶栓在脑血管疾病评估中常用 mTICI 分级来描述血管再通情况[1]：",
+        mtici0: "<strong>mTICI 0：</strong>无再通，完全闭塞。",
+        mtici1: "<strong>mTICI 1：</strong>微量再通，造影剂仅少量通过。",
+        mtici2a: "<strong>mTICI 2a：</strong>部分再通，灌注不到 50%。",
+        mtici2b: "<strong>mTICI 2b：</strong>大部分再通，灌注 50-99%。",
+        mtici3: "<strong>mTICI 3：</strong>完全再通，正常灌注。",
+        mticiNote: "<strong>在临床实践中，mTICI 评分 T1 的定义较为模糊，观察者间差异较大，T0 与 T1 常被合并为 T0/1 评分[2]。<strong>",
+        mticiRefs: "[1] Zaidat O O, Yoo A J, Khatri P, et al. <em>Recommendations on angiographic revascularization grading standards for acute ischemic stroke: a consensus statement.</em> <strong>Stroke</strong>, 2013, 44(9): 2650–2663.<br>[2] Tung E L, McTaggart R A, Baird G L, et al. <em>Rethinking thrombolysis in cerebral infarction 2b: which thrombolysis in cerebral infarction scales best define near complete recanalization in the modern thrombectomy era?</em> <strong>Stroke</strong>, 2017, 48(9): 2488–2493."
+      },
+      en: {
+        title: "🩻 mTICI-assisted Stroke Thrombolysis Decision Support",
+        subtitle: "Upload coronal and sagittal DICOM studies for automated analysis.",
+        corLabel: "Coronal View (COR) DICOM File",
+        sagLabel: "Sagittal View (SAG) DICOM File",
+        previewTitle: "Quick Preview",
+        submit: "Start Prediction",
+        footer: "© 2025 HMI-Med Demo | Intelligent Medical Imaging",
+        loadingTitle: "Analyzing… DICOM previews are shown below.",
+        loadingCorHeading: "Coronal Preview",
+        loadingSagHeading: "Sagittal Preview",
+        mticiHeading: "mTICI Grading Overview",
+        mticiLead: "The modified TICI scale describes cerebral reperfusion status [1]:",
+        mtici0: "<strong>mTICI 0:</strong> No reperfusion; complete occlusion.",
+        mtici1: "<strong>mTICI 1:</strong> Minimal reperfusion with limited contrast passage.",
+        mtici2a: "<strong>mTICI 2a:</strong> Partial reperfusion with &lt; 50% distal filling.",
+        mtici2b: "<strong>mTICI 2b:</strong> Substantial reperfusion with 50–99% perfusion.",
+        mtici3: "<strong>mTICI 3:</strong> Complete reperfusion with normal distal flow.",
+        mticiNote: "<strong>In clinical practice, the definition of T1 is ambiguous, and inter-observer variability is high; T0 and T1 are often merged as T0/1 [2].<strong>",
+        mticiRefs: "[1] Zaidat O O, Yoo A J, Khatri P, et al. <em>Recommendations on angiographic revascularization grading standards for acute ischemic stroke: a consensus statement.</em> <strong>Stroke</strong>, 2013, 44(9): 2650–2663.<br>[2] Tung E L, McTaggart R A, Baird G L, et al. <em>Rethinking thrombolysis in cerebral infarction 2b: which thrombolysis in cerebral infarction scales best define near complete recanalization in the modern thrombectomy era?</em> <strong>Stroke</strong>, 2017, 48(9): 2488–2493."
+      }
+    };
+
+    const langInput = document.getElementById("langInput");
+    const langSwitchButtons = document.querySelectorAll("#langSwitch [data-lang]");
+    let currentLang = langInput.value || "zh";
+
+    function applyTranslations() {
+      const t = translations[currentLang];
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.dataset.i18n;
+        if (t[key]) el.innerHTML = t[key];
+      });
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      langInput.value = lang;
+      document.documentElement.lang = lang;
+      localStorage.setItem("mtici-lang", lang);
+      applyTranslations();
+    }
+
+    langSwitchButtons.forEach(btn => {
+      btn.addEventListener("click", () => setLanguage(btn.dataset.lang));
+    });
+
+    applyTranslations();
+
+    // 文件选择与 GIF 预览
+    async function requestGif(file, key) {
+      if (!file) return;
+      const formData = new FormData();
+      formData.append("dicom", file);
+
+      const previewContainer = document.getElementById(`${key}PreviewContainer`);
+      const previewImg = document.getElementById(`${key}Preview`);
+      const previewStatus = document.getElementById(`${key}PreviewStatus`);
+      previewContainer.classList.remove("d-none");
+      previewImg.classList.add("d-none");
+      previewStatus.textContent = "正在生成预览…";
+
+      try {
+        const res = await fetch("/preview_gif", { method: "POST", body: formData });
+        const data = await res.json();
+        if (!data.gif) throw new Error(data.error || "生成 GIF 失败");
+        previewImg.src = `data:image/gif;base64,${data.gif}`;
+        previewImg.classList.remove("d-none");
+        previewStatus.textContent = `✅ 预览生成成功（FPS: ${data.fps?.toFixed(2) || 4}）`;
+        previewState[key] = { src: previewImg.src };
+      } catch (err) {
+        previewStatus.textContent = "❌ " + err.message;
+      }
+    }
+
+    function handleFileSelect(inputId, nameId, key) {
+      const input = document.getElementById(inputId);
+      const nameBox = document.getElementById(nameId);
+      input.addEventListener("change", () => {
+        const file = input.files[0];
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith(".dcm")) {
+          alert("仅支持 DICOM (.dcm) 文件");
+          input.value = "";
+          return;
+        }
+        nameBox.innerText = "✅ " + file.name;
+        requestGif(file, key);
+      });
+    }
+
+    handleFileSelect("corFile", "corName", "cor");
+    handleFileSelect("sagFile", "sagName", "sag");
+
+    // 提交逻辑
+    const form = document.getElementById("uploadForm");
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      document.getElementById("uploadCard").classList.add("fade-out");
+      setTimeout(() => {
+        document.getElementById("uploadCard").style.display = "none";
+        const loading = document.getElementById("loading");
+        loading.style.display = "block";
+        loading.classList.add("fade-in");
+        if (previewState.cor?.src) {
+          document.getElementById("loadingCorGif").src = previewState.cor.src;
+          document.getElementById("loadingCorGif").classList.remove("d-none");
+          document.getElementById("loadingCorPlaceholder").classList.add("d-none");
+        }
+        if (previewState.sag?.src) {
+          document.getElementById("loadingSagGif").src = previewState.sag.src;
+          document.getElementById("loadingSagGif").classList.remove("d-none");
+          document.getElementById("loadingSagPlaceholder").classList.add("d-none");
+        }
+        form.submit();
+      }, 400);
+    });
+  </script>
+</body>
+</html>
