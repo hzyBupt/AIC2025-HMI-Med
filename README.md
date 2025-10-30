@@ -4,7 +4,6 @@
 Created by Heziyang, Weijin Xu
 
 ![](Show//Net_CVFMTrans_QV.png)
-![](Show//Show.png)
 
 Prequisites
 ------------
@@ -17,6 +16,7 @@ The modified Thrombolysis In Cerebral Infarction (mTICI) score serves as one of 
 Step 1 AmTICIS data request
 ------------
 The original AmTICIS will be opened after our paper is officially accepted, you can use the lmdb databae we generated, currently.
+![](Show//Show.png)
 
 Step 2 Preprocess the dicom file
 ------------------------
