@@ -2,7 +2,7 @@
 ==============================================================================================================================
 
 Created by Heziyang, Weijin Xu
-[▶ Click to watch demo video]()
+[▶ Click to watch demo video](https://raw.githubusercontent.com/hzyBupt/AIC2025-HMI-Med/main/Rec%200001.mp4)
 
 ![](Show//Net_CVFMTrans_QV.png)
 
